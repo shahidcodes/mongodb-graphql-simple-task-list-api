@@ -17,6 +17,7 @@ const typeDefs = gql`
     signUp(input: SignUpInput!): AuthUser!
     signIn(input: SignInInput!): AuthUser!
     createTaskList(title: String!): TaskList!
+    updateTaskList(title: String!, id: ID!): TaskList!
   }
 
   #input
@@ -120,6 +121,23 @@ const resolvers = {
       };
       const result = await db.collection("task_list").insertOne(doc);
       return result.ops[0];
+    }),
+    updateTaskList: authenticated(async (
+      _,
+      { title, id },
+      /** @type {{db: import('mongodb').Db, user:any}} */ { db, user }
+    ) => {
+      const result = await db.collection("task_list").findOneAndUpdate(
+        {
+          _id: ObjectID(id),
+        },
+        {
+          $set: {
+            title,
+          },
+        }
+      );
+      return result.value;
     }),
   },
   User: {
