@@ -9,6 +9,7 @@ const typeDefs = gql`
   type Query {
     myTaskList: [TaskList!]!
     me: User
+    taskList(id: ID!): TaskList
   }
 
   # mutation
@@ -18,6 +19,8 @@ const typeDefs = gql`
     signIn(input: SignInInput!): AuthUser!
     createTaskList(title: String!): TaskList!
     updateTaskList(title: String!, id: ID!): TaskList!
+    deleteTaskList(id: ID!): Boolean
+    addUserToTaskList(taskListId: ID!, userId: ID!): TaskList
   }
 
   #input
@@ -78,6 +81,17 @@ const resolvers = {
     me: authenticated((root, data, { db, user }) => {
       return user;
     }),
+    taskList: authenticated(async (
+      _,
+      { id },
+      /** @type {{db: import('mongodb').Db, user:any}} */ { db, user }
+    ) => {
+      console.log("get task", id);
+      const result = await db.collection("task_list").findOne({
+        _id: ObjectID(id),
+      });
+      return result;
+    }),
   },
   Mutation: {
     async signUp(_, { input }, { db }) {
@@ -137,6 +151,34 @@ const resolvers = {
           },
         }
       );
+      return result.value;
+    }),
+    deleteTaskList: authenticated(async (
+      _,
+      { id },
+      /** @type {{db: import('mongodb').Db, user:any}} */ { db, user }
+    ) => {
+      const result = await db.collection("task_list").deleteOne({
+        _id: ObjectID(id),
+      });
+      return result.deletedCount !== 0;
+    }),
+    addUserToTaskList: authenticated(async (
+      _,
+      { taskListId, userId },
+      /** @type {{db: import('mongodb').Db, user:any}} */ { db, user }
+    ) => {
+      const result = await db.collection("task_list").findOneAndUpdate(
+        {
+          _id: ObjectID(taskListId),
+        },
+        {
+          $addToSet: {
+            userIds: ObjectID(userId),
+          },
+        }
+      );
+      console.log(result);
       return result.value;
     }),
   },
