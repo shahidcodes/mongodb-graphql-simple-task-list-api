@@ -23,6 +23,7 @@ const typeDefs = gql`
     addUserToTaskList(taskListId: ID!, userId: ID!): TaskList
     createTodo(taskListId: ID!, content: String!): TaskList!
     updateTodo(id: ID!, content: String, isCompleted: Boolean): Todo!
+    deleteTodo(id: ID!): Boolean
   }
 
   #input
@@ -243,7 +244,24 @@ const resolvers = {
   },
   TaskList: {
     id: ({ _id, id }) => _id || id,
-    progress: ({ todos = [] }) => todos.length,
+    progress: async (
+      { todoIds = [] },
+      data,
+      /** @type {{db: import('mongodb').Db}} */ { db }
+    ) => {
+      console.log("total", todoIds.length);
+      if (todoIds.length === 0) return 0;
+      const taskTodos = await db
+        .collection("task_todos")
+        .find({
+          _id: { $in: todoIds.map((id) => ObjectID(id)) },
+        })
+        .toArray();
+      const completed = taskTodos.filter((todo) => todo.isCompleted);
+      if (completed.length === 0) return 0;
+      const progress = (completed.length / todoIds.length) * 100;
+      return Math.round(progress);
+    },
     users: async (
       { userIds },
       data,
