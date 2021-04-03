@@ -21,6 +21,7 @@ const typeDefs = gql`
     updateTaskList(title: String!, id: ID!): TaskList!
     deleteTaskList(id: ID!): Boolean
     addUserToTaskList(taskListId: ID!, userId: ID!): TaskList
+    createTodo(taskListId: ID!, content: String!): TaskList!
   }
 
   #input
@@ -181,6 +182,32 @@ const resolvers = {
       console.log(result);
       return result.value;
     }),
+    createTodo: authenticated(async (
+      _,
+      { taskListId, content },
+      /** @type {{db: import('mongodb').Db, user:any}} */ { db, user }
+    ) => {
+      const todoItem = {
+        taskListId: ObjectID(taskListId),
+        content,
+        isCompleted: false,
+      };
+
+      const taskTodo = await db.collection("task_todos").insertOne(todoItem);
+
+      const result = await db.collection("task_list").findOneAndUpdate(
+        {
+          _id: ObjectID(taskListId),
+        },
+        {
+          $addToSet: {
+            todoIds: ObjectID(taskTodo.insertedId),
+          },
+        }
+      );
+      console.log(result.value);
+      return result.value;
+    }),
   },
   User: {
     // if user is coming from some other resolver which will id instead of _id
@@ -201,6 +228,23 @@ const resolvers = {
         })
         .toArray();
       return users;
+    },
+    todos: async (
+      { todoIds },
+      data,
+      /** @type {{db: import('mongodb').Db}} */ { db }
+    ) => {
+      console.log("getting todos");
+      const todos = await db
+        .collection("task_todos")
+        .find({
+          _id: { $in: todoIds.map((id) => ObjectID(id)) },
+        })
+        .toArray();
+
+      console.log(todos);
+
+      return todos;
     },
   },
 };
