@@ -1,7 +1,7 @@
 const { ObjectID } = require('mongodb');
-const authenticated = require('../middleware/authenticated');
+const { authenticated } = require('../../middleware');
 
-/** @typedef {import('../../global').ContextType} ContextType */
+/** @typedef {import('../../../global').ContextType} Context */
 
 const Query = {
   myTaskList: authenticated(async (root, data, { db, user }) => {
@@ -14,11 +14,7 @@ const Query = {
     return taskLists;
   }),
   me: authenticated((root, data, { user }) => user),
-  taskList: authenticated(async (
-    _,
-    { id },
-    /** @type {ContextType} */ { db },
-  ) => {
+  taskList: authenticated(async (_, { id }, /** @type {Context} */ { db }) => {
     console.log('get task', id);
     const result = await db.collection('task_list').findOne({
       _id: new ObjectID(id),

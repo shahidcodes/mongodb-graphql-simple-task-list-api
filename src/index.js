@@ -3,6 +3,7 @@ const { MongoClient } = require('mongodb');
 const { ApolloServer } = require('apollo-server');
 const typeDefs = require('./typeDefs');
 const resolvers = require('./resolvers');
+const { verify } = require('./jwt');
 
 async function start() {
   const client = new MongoClient(process.env.DB_URI, {
